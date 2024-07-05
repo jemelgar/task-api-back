@@ -2,11 +2,6 @@ const User = require('../models/userModel');
 const { validateEmail, validatePassword } = require('../utils/validate');
 const jwt = require('jsonwebtoken');
 
-const greetUser = (req, res) => {
-  console.log('Homlis auth');
-  res.send('<h1>Holis</h1>');
-};
-
 const register = async (req, res) => {
   const { firstName, lastName, email, password } = req.body;
   if (
@@ -24,12 +19,19 @@ const register = async (req, res) => {
   const repeatedEmail = await User.findOne({ email: email });
   if (repeatedEmail) {
     console.log(repeatedEmail);
-    res.send('Email already taken');
+    res.status(400).send({ ok: false, errMsg: 'Email already taken' });
   } else {
     try {
       const user = new User({ firstName, lastName, email, password });
       await user.save();
-      res.status(201).send('User saved ❤️');
+
+      //revisamos el usuario guardado para generar un jwt y mandarlo al front
+      const userSaved = await User.findOne({ email });
+      const token = jwt.sign({ userId: userSaved._id }, 'secretKey');
+
+      res.status(201).send({ ok: true, jwt: token });
+
+      // res.status(201).send('{"resp": "User Saved ❤️" }');
     } catch (error) {
       console.error('Something went wrong ', error);
       res.status(400).send(`Algo salió mal ${error.message}`);
@@ -48,13 +50,15 @@ const login = async (req, res) => {
 };
 
 const getProfile = async (req, res) => {
+  console.log(req.headers);
+
   try {
-    const token = req.headers.authorization;
+    const token = req.headers.auth;
     const decoded = jwt.verify(token, 'secretKey');
     const user = await User.findById(decoded.userId).select('-password');
     res.send(user);
   } catch (error) {
-    res.status(401).send('Unauthorized');
+    res.status(401).send('Unauthorized' + JSON.stringify(req.headers));
   }
 };
-module.exports = { greetUser, register, login, getProfile };
+module.exports = { register, login, getProfile };

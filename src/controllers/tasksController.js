@@ -3,7 +3,7 @@ const Task = require('../models/taskModel');
 const getTasks = async (req, res) => {
   try {
     const tasks = await Task.find({ userId: req.user.userId });
-    tasks.length ? res.send(tasks) : res.send('There are no tasks');
+    tasks.length ? res.send(tasks) : res.send({ msg: 'There are no tasks' });
   } catch (error) {
     res.status(500).send('Server Error');
   }
@@ -11,7 +11,8 @@ const getTasks = async (req, res) => {
 
 const addTask = async (req, res) => {
   const { description } = req.body;
-  if (!description) return res.status(401).send('Debes poner una descripción');
+  if (!description)
+    return res.status(401).send({ msg: 'Debes poner una descripción' });
   const newTask = new Task({ description, userId: req.user.userId });
   try {
     const task = await newTask.save();
